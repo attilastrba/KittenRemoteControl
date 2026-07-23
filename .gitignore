@@ -1,0 +1,13 @@
+# Build output
+bin/
+obj/
+
+# Generated stub DLLs (produced by building KSA_stub / StarMap_stub)
+KSA_dlls/
+
+# macOS
+.DS_Store
+
+# IDE / tooling
+.vs/
+*.user

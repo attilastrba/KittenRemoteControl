@@ -57,10 +57,25 @@
         </Reference>
     </ItemGroup>
 
+    <!-- StarMap.API: prefer the loader's actual DLL (dropped into KSA_dlls) so the build matches
+         the runtime exactly. The public starmap.api NuGet is net10-only and cannot be used for a
+         net9.0 mod. Private=false: the loader already provides this assembly at runtime. -->
+    <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\..\KSA_dlls\StarMap.API.dll')">
+        <Reference Include="StarMap.API">
+            <HintPath>$(MSBuildProjectDirectory)\..\KSA_dlls\StarMap.API.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+    <!-- Fallback for CI (Windows), which restores the net9 package 0.3.1 from StarMap's feed. -->
+    <ItemGroup Condition="!Exists('$(MSBuildProjectDirectory)\..\KSA_dlls\StarMap.API.dll')">
+        <PackageReference Include="starmap.api" Version="0.3.1" />
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="Lib.Harmony" Version="2.4.1"/>
-        <PackageReference Include="starmap.api" Version="0.3.1" />
-        <PackageReference Include="Grapevine" Version="5.0.2" />
+        <!-- Grapevine removed: its RestServer wraps System.Net.HttpListener (Windows http.sys),
+             which is not implemented under Wine/CrossOver. Replaced by the built-in TcpHttpServer. -->
+
     </ItemGroup>
 
     <Target Name="DumpReferences" BeforeTargets="CoreCompile">

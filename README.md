@@ -28,7 +28,7 @@ If you want to build from source:
    ```bash
    dotnet build -c Release
    ```
-4. Copy the contents of `bin/Release/net9.0/` to your game's mod directory
+4. Copy the contents of `bin/Release/net9.0/` to your game's mod directory (no external server DLLs are required)
 
 ### Verification
 
@@ -41,7 +41,7 @@ To verify the installation:
 
 The release package includes:
 - ✅ Main mod DLL (KittenRemoteControl.dll)
-- ✅ All required dependencies (Harmony, Grapevine, Microsoft.Extensions.*)
+- ✅ All required dependencies (Harmony)
 - ✅ Complete documentation (README, OpenAPI spec)
 - ✅ All license files
 
@@ -67,7 +67,9 @@ See: https://forums.ahwoo.com/threads/how-to-use-starmap-mod-loader.398/#post-21
 
 ## Protocol
 
-The server uses a RESTful HTTP API with JSON request/response format powered by Grapevine.
+The server uses a RESTful HTTP API with JSON request/response format, served by a built-in
+lightweight HTTP server (raw `TcpListener`). It does **not** use `System.Net.HttpListener`, so it
+runs on Wine/CrossOver where the Windows HTTP Server API (http.sys) is unavailable.
 
 ### Base URL
 ```
@@ -691,12 +693,12 @@ dotnet build -c Release
 ```
 
 ### Deployment
-The DLL is built to `bin/Release/net9.0/KittenRemoteControl.dll` and can be copied to the game's mod directory along with Grapevine dependencies.
+The DLL is built to `bin/Release/net9.0/KittenRemoteControl.dll` and can be copied to the game's mod directory (no external server dependencies are required).
 
 ## Features
 
 - ✅ RESTful HTTP API with JSON
-- ✅ Powered by Grapevine server
+- ✅ Built-in lightweight HTTP server (no `HttpListener` / http.sys dependency — works under Wine/CrossOver)
 - ✅ Flexible input (JSON objects or plain values)
 - ✅ Proper HTTP status codes
 - ✅ Clean and modern API design
@@ -707,8 +709,8 @@ The DLL is built to `bin/Release/net9.0/KittenRemoteControl.dll` and can be copi
 
 ## Technical Details
 
-The server uses Grapevine REST server framework:
-- Port: 8080 (configurable)
+The server uses a built-in `TcpListener`-based HTTP/1.1 server (see `TcpHttpServer.cs`):
+- Port: 8080 (bound to 127.0.0.1 / localhost)
 - Protocol: HTTP/1.1
 - Format: JSON (with fallback to plain text for simple values)
 - Encoding: UTF-8

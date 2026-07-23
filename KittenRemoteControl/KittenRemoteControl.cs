@@ -1,13 +1,12 @@
-﻿using KSA;
 using StarMap.API;
-using Grapevine;
 
 namespace KittenRemoteControl
 {
     [StarMapMod]
     public class RemoteControlMain
     {
-        private IRestServer? _restServer;
+        private const int Port = 8080;
+        private TcpHttpServer? _httpServer;
 
         [StarMapAfterGui]
         public void OnAfterUi(double dt)
@@ -19,20 +18,23 @@ namespace KittenRemoteControl
         {
             Patcher.Patch();
 
-            // Initialize Grapevine REST server
+            // Initialize the built-in TCP HTTP server.
+            // We deliberately avoid HttpListener (used by Grapevine) because it relies on the
+            // Windows HTTP Server API (http.sys), which is not implemented under Wine/CrossOver.
             try
             {
-                _restServer = RestServerBuilder.UseDefaults()
-                    .Build();
-                
-                // Set the port via Prefixes
-                _restServer.Prefixes.Add("http://localhost:8080/");
+                _httpServer = new TcpHttpServer(Port);
 
-                _restServer.Start();
-                Console.WriteLine("Remote Control REST Server started successfully on http://localhost:8080");
-                Console.WriteLine("Available endpoints:");
+                var resource = new RemoteControlResource();
+                resource.RegisterRoutes(_httpServer);
+
+                _httpServer.Start();
+
+                Console.WriteLine($"Remote Control REST Server started successfully on http://localhost:{Port}");
+                Console.WriteLine($"Registered {_httpServer.RouteCount} routes. Available endpoints:");
                 Console.WriteLine("  GET/PUT /control/throttle");
                 Console.WriteLine("  GET/PUT /control/engineOn");
+                Console.WriteLine("  GET/POST /control/thrusters");
                 Console.WriteLine("  GET/PUT /control/referenceFrame");
                 Console.WriteLine("  GET /control/referenceFrames");
                 Console.WriteLine("  GET/PUT /control/flightComputer/attitudeMode");
@@ -64,15 +66,15 @@ namespace KittenRemoteControl
         {
             try
             {
-                _restServer?.Stop();
+                _httpServer?.Dispose();
+                _httpServer = null;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error stopping REST server: {ex.Message}");
             }
-            
+
             Patcher.Unload();
         }
     }
 }
-

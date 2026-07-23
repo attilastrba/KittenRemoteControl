@@ -58,6 +58,14 @@ jobs:
         Write-Host "Copied KSA.dll to $dest"
       shell: powershell
 
+    - name: Build local StarMap.API stub
+      run: |
+        echo "Building local StarMap.API stub to provide StarMap.API.dll for the build"
+        # Emits StarMap.API.dll directly into KSA_dlls; the main project references it there.
+        # This keeps the build token-free (public starmap.api is net10-only and cannot target net9).
+        dotnet build "StarMap_stub/StarMap_stub.csproj" -c Release
+      shell: powershell
+
     - name: Add StarMap GitHub Packages NuGet feed (using personal token)
       if: ${{ env.STARMAP_NUGET_TOKEN != '' }}
       run: |
@@ -190,8 +198,8 @@ jobs:
         
         ## What's Included
         
-        - Main mod DLL with REST API server
-        - All required dependencies (Grapevine + Microsoft.Extensions.*)
+        - Main mod DLL with built-in REST API server (no HttpListener dependency)
+        - All required dependencies (Harmony)
         - Complete documentation (README.md, OpenAPI spec)
         - All license files
         
