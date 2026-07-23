@@ -12,6 +12,9 @@ namespace KSA
     {
         // Real KSA: a public static FIELD (not a property).
         public static Vehicle? ControlledVehicle;
+
+        // Real KSA: a public static PROPERTY (get) — current controlled-vehicle altitude in km.
+        public static double CurrentAltitudeKm { get; set; }
     }
 
     public class Vehicle

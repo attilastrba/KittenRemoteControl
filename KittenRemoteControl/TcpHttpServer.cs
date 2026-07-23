@@ -13,6 +13,8 @@ namespace KittenRemoteControl
     {
         public required string Method { get; init; }
         public required string Path { get; init; }
+        /// <summary>Raw (still URL-encoded) query string, i.e. everything after '?'. Empty if none.</summary>
+        public string RawQuery { get; init; } = "";
         public string Body { get; init; } = "";
         public Dictionary<string, string> Headers { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     }
@@ -84,8 +86,11 @@ namespace KittenRemoteControl
             var socketsAsm = Assembly.Load("System.Net.Sockets");
             var tcpListenerType = socketsAsm.GetType("System.Net.Sockets.TcpListener", throwOnError: true)!;
 
-            // new TcpListener(IPAddress.Loopback, _port)
-            _listener = Activator.CreateInstance(tcpListenerType, IPAddress.Loopback, _port)!;
+            // new TcpListener(IPAddress.Any, _port)
+            // NOTE: bound to IPAddress.Any (0.0.0.0) so the API is reachable from other machines on
+            // the LAN. This API has no authentication or TLS and can control the vessel, so anyone
+            // who can reach this port can command it.
+            _listener = Activator.CreateInstance(tcpListenerType, IPAddress.Any, _port)!;
             _acceptMethod = tcpListenerType.GetMethod("AcceptTcpClientAsync", Type.EmptyTypes)!;
             _stopMethod = tcpListenerType.GetMethod("Stop", Type.EmptyTypes)!;
             tcpListenerType.GetMethod("Start", Type.EmptyTypes)!.Invoke(_listener, null);
@@ -223,6 +228,7 @@ namespace KittenRemoteControl
             var rawPath = requestLine[1];
             var queryIdx = rawPath.IndexOf('?');
             var path = queryIdx >= 0 ? rawPath[..queryIdx] : rawPath;
+            var query = queryIdx >= 0 ? rawPath[(queryIdx + 1)..] : "";
 
             var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             for (var i = 1; i < lines.Length; i++)
@@ -259,7 +265,7 @@ namespace KittenRemoteControl
                 ? Encoding.UTF8.GetString(bodyBytes.ToArray(), 0, Math.Min(contentLength, bodyBytes.Count))
                 : "";
 
-            return new HttpRequest { Method = method, Path = path, Body = body, Headers = headers };
+            return new HttpRequest { Method = method, Path = path, RawQuery = query, Body = body, Headers = headers };
         }
 
         private static int IndexOfDoubleCrlf(List<byte> data)

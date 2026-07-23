@@ -6,7 +6,9 @@ namespace KittenRemoteControl
     public class RemoteControlMain
     {
         private const int Port = 8080;
+        private const int TelemachusPort = 8085;
         private TcpHttpServer? _httpServer;
+        private TcpHttpServer? _telemachusServer;
 
         [StarMapAfterGui]
         public void OnAfterUi(double dt)
@@ -54,6 +56,20 @@ namespace KittenRemoteControl
                 Console.WriteLine($"Failed to start REST server: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
             }
+
+            // Telemachus-compatible datalink server (separate port, bound to all interfaces).
+            try
+            {
+                _telemachusServer = new TcpHttpServer(TelemachusPort);
+                new TelemachusDatalink().RegisterRoutes(_telemachusServer);
+                _telemachusServer.Start();
+                Console.WriteLine($"Telemachus datalink started on http://0.0.0.0:{TelemachusPort}/telemachus/datalink");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to start Telemachus datalink server: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
         }
 
         [StarMapImmediateLoad]
@@ -68,6 +84,8 @@ namespace KittenRemoteControl
             {
                 _httpServer?.Dispose();
                 _httpServer = null;
+                _telemachusServer?.Dispose();
+                _telemachusServer = null;
             }
             catch (Exception ex)
             {
