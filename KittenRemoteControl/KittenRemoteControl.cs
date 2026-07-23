@@ -13,6 +13,9 @@ namespace KittenRemoteControl
         [StarMapAfterGui]
         public void OnAfterUi(double dt)
         {
+            // Runs on the main/UI thread each frame — execute work queued by HTTP handler threads
+            // (e.g. staging) here so game-state mutations don't race the simulation thread.
+            MainThreadDispatcher.Drain();
         }
 
         [StarMapAllModsLoaded]

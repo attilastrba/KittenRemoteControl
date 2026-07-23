@@ -162,6 +162,31 @@ namespace KittenRemoteControl
                     return Program.CurrentAltitudeKm * 1000.0; // km -> m
                 }
 
+                case "o.ApA": return AltitudeAsl(apoapsis: true, km: false);   // apoapsis ASL (m)
+                case "o.PeA": return AltitudeAsl(apoapsis: false, km: false);  // periapsis ASL (m)
+                case "o.ApAkm": return AltitudeAsl(apoapsis: true, km: true);  // apoapsis ASL (km, non-stock)
+                case "o.PeAkm": return AltitudeAsl(apoapsis: false, km: true); // periapsis ASL (km, non-stock)
+
+                case "f.stage": // fire the next stage (KSA: activate next sequence)
+                    // Marshalled to the main thread; running it on the HTTP thread races the sim
+                    // and wedges the game after the first stage.
+                    MainThreadDispatcher.Enqueue(() =>
+                    {
+                        var v = Program.ControlledVehicle;
+                        v?.Parts.SequenceList.ActivateNextSequence(v);
+                    });
+                    return 0;
+
+                // Not a stock Telemachus key, but follows the same action-group toggle convention
+                // (no arg -> toggle, [true]/[false] -> set). Turns the engine on/off.
+                case "f.engine":
+                {
+                    var parsed = args.Length >= 1 ? ParseBool(args[0]) : null;
+                    var target = parsed ?? !ManualControlHelper.GetManualControlValue<bool>("EngineOn");
+                    try { ManualControlHelper.SetManualControlValue("EngineOn", target); } catch { }
+                    return 0;
+                }
+
                 case "f.setThrottle":
                 {
                     var t = args.Length >= 1 &&
@@ -176,6 +201,27 @@ namespace KittenRemoteControl
                 default:
                     return -1; // unknown / not yet mapped -> missing sentinel
             }
+        }
+
+        // Apoapsis/periapsis altitude above sea level (orbit radius - body near-surface radius).
+        // Returns -1 when there is no orbit. km=true divides the result by 1000.
+        private static object AltitudeAsl(bool apoapsis, bool km)
+        {
+            var orbit = Program.ControlledVehicle?.Orbit;
+            if (orbit == null) return -1;
+            var radius = apoapsis ? orbit.Apoapsis : orbit.Periapsis;
+            var alt = radius - (orbit.Parent?.GetNearSurfaceRadius() ?? 0.0);
+            return km ? alt / 1000.0 : alt;
+        }
+
+        // Parse a Telemachus-style boolean arg: true/false (any case) or 1/0. null if unparseable.
+        private static bool? ParseBool(string s)
+        {
+            if (bool.TryParse(s, out var b)) return b;
+            s = s.Trim();
+            if (s == "1") return true;
+            if (s == "0") return false;
+            return null;
         }
 
         /// <summary>

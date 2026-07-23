@@ -30,6 +30,9 @@ namespace KSA
         public float PropellantMass { get; set; }
         public float TotalMass { get; set; }
 
+        // Real KSA: public field. Root of the part/staging tree.
+        public PartTree Parts = new PartTree();
+
         // Private field accessed by reflection in ManualControlHelper.
         private ManualControlInputs _manualControlInputs;
 
@@ -47,6 +50,18 @@ namespace KSA
     public interface IParentBody
     {
         double GetNearSurfaceRadius();
+    }
+
+    // Staging: real KSA fires the next stage via SequenceList.ActivateNextSequence(vehicle),
+    // reached from the vehicle's part tree (Vehicle.Parts.SequenceList).
+    public class PartTree
+    {
+        public SequenceList SequenceList = new SequenceList();
+    }
+
+    public class SequenceList
+    {
+        public void ActivateNextSequence(Vehicle vehicle) { /* noop in stub */ }
     }
 
     public class FlightComputer
