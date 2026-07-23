@@ -481,8 +481,7 @@ namespace KittenRemoteControl
             try
             {
                 var vehicle = Program.ControlledVehicle;
-                var meanRadius = vehicle?.Orbit?.Parent.MeanRadius;
-                var radius = meanRadius.HasValue ? Convert.ToDouble(meanRadius, CultureInfo.InvariantCulture) : 0.0;
+                var radius = vehicle?.Orbit?.Parent?.GetNearSurfaceRadius() ?? 0.0;
                 return Json(new { meanRadius = radius });
             }
             catch (Exception ex)
@@ -502,8 +501,8 @@ namespace KittenRemoteControl
                     return Json(new { apoapsisElevation = 0.0 });
                 }
 
-                var apoVal = Convert.ToDouble(orbit.Apoapsis, CultureInfo.InvariantCulture);
-                var radiusVal = Convert.ToDouble(orbit.Parent.MeanRadius, CultureInfo.InvariantCulture);
+                var apoVal = orbit.Apoapsis;
+                var radiusVal = orbit.Parent?.GetNearSurfaceRadius() ?? 0.0;
                 var elevation = apoVal - radiusVal;
 
                 return Json(new { apoapsisElevation = elevation });
@@ -525,8 +524,8 @@ namespace KittenRemoteControl
                     return Json(new { periapsisElevation = 0.0 });
                 }
 
-                var periVal = Convert.ToDouble(orbit.Periapsis, CultureInfo.InvariantCulture);
-                var radiusVal = Convert.ToDouble(orbit.Parent.MeanRadius, CultureInfo.InvariantCulture);
+                var periVal = orbit.Periapsis;
+                var radiusVal = orbit.Parent?.GetNearSurfaceRadius() ?? 0.0;
                 var elevation = periVal - radiusVal;
 
                 return Json(new { periapsisElevation = elevation });
