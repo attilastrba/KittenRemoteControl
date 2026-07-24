@@ -21,6 +21,24 @@
 
   <div class="stack">
     <div class="gauge"><span class="screw-l"></span><span class="screw-r"></span>
+      <div class="label">Stage &#916;V</div>
+      <div class="dv-row">
+        <div class="arc-wrap">
+          <svg class="arc" viewBox="0 0 120 120">
+            <circle class="arc-track" cx="60" cy="60" r="52" transform="rotate(135 60 60)"></circle>
+            <circle class="arc-val"   cx="60" cy="60" r="52" transform="rotate(135 60 60)"></circle>
+          </svg>
+          <div class="arc-center"><span id="dvPct">--</span><small>%</small></div>
+        </div>
+        <div class="dv-num">
+          <div class="dv-big"><span id="dvStage">--</span><small>km/s</small></div>
+          <div class="dv-sub">of <span id="dvStageMax">--</span> km/s</div>
+          <div class="dv-kmh"><span id="dvStageKmh">--</span> km/h</div>
+          <div class="dv-total">TOTAL <span id="dvTotal">--</span> km/s</div>
+        </div>
+      </div>
+    </div>
+    <div class="gauge"><span class="screw-l"></span><span class="screw-r"></span>
       <div class="label">Apoapsis</div>
       <div class="readout" data-gauge="apoapsis"></div>
     </div>

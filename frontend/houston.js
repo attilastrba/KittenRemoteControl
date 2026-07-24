@@ -63,6 +63,37 @@ document.querySelectorAll(".readout").forEach(el => {
   gauges[el.dataset.gauge] = el;
 });
 
+// ---- delta-v radial gauge --------------------------------------------------
+const ARC_R = 52;
+const ARC_C = 2 * Math.PI * ARC_R;   // full circumference
+const ARC_LEN = 0.75 * ARC_C;        // 270-degree sweep (90-degree gap at the bottom)
+const arcTrack = document.querySelector(".arc-track");
+const arcVal = document.querySelector(".arc-val");
+const dvPct = document.getElementById("dvPct");
+const dvStage = document.getElementById("dvStage");
+const dvStageMax = document.getElementById("dvStageMax");
+const dvStageKmh = document.getElementById("dvStageKmh");
+const dvTotal = document.getElementById("dvTotal");
+arcTrack.setAttribute("stroke-dasharray", `${ARC_LEN.toFixed(1)} ${ARC_C.toFixed(1)}`);
+
+// delta-v arrives in m/s. Show km/s (÷1000) as the primary, km/h (×3.6) as a small secondary.
+function kms(v) { return (typeof v === "number" && v >= 0) ? (v / 1000).toFixed(2) : "--"; }
+function kmh(v) { return (typeof v === "number" && v >= 0) ? String(Math.round(v * 3.6)) : "--"; }
+
+function updateDeltaV(stage, stageMax, total) {
+  const s = num(stage), sm = num(stageMax), t = num(total);
+  const has = sm > 0 && s >= 0;
+  const frac = has ? Math.max(0, Math.min(1, s / sm)) : 0;
+
+  arcVal.setAttribute("stroke-dasharray", `${(frac * ARC_LEN).toFixed(1)} ${ARC_C.toFixed(1)}`);
+  arcVal.style.stroke = frac > 0.3 ? "var(--ok)" : frac > 0.1 ? "#f5b942" : "var(--bad)";
+  dvPct.textContent = has ? Math.round(frac * 100) : "--";
+  dvStage.textContent = kms(s);
+  dvStageMax.textContent = kms(sm);
+  dvStageKmh.textContent = kmh(s);
+  dvTotal.textContent = kms(t);
+}
+
 // ---- polling ---------------------------------------------------------------
 const statusEl = document.getElementById("status");
 const statusText = document.getElementById("statusText");
@@ -84,7 +115,8 @@ function setOnline(on) {
 function num(v) { return (typeof v === "number") ? v : -1; }
 
 async function poll() {
-  const q = "ap=o.ApAkm&pe=o.PeAkm&alt=v.altitude&ver=a.version";
+  const q = "ap=o.ApAkm&pe=o.PeAkm&alt=v.altitude&ver=a.version" +
+            "&dvS=dv.stageDVActual&dvSM=dv.stageMaxDVActual&dvT=dv.totalDVActual";
   try {
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), 2000);
@@ -96,6 +128,7 @@ async function poll() {
     setGauge(gauges.apoapsis, num(data.ap));
     setGauge(gauges.periapsis, num(data.pe));
     setGauge(gauges.altitude, alt);
+    updateDeltaV(data.dvS, data.dvSM, data.dvT);
 
     const online = typeof data.ver === "string" && data.ver.length > 0;
     setOnline(online);
@@ -110,6 +143,7 @@ async function poll() {
     setGauge(gauges.apoapsis, -1);
     setGauge(gauges.periapsis, -1);
     setGauge(gauges.altitude, -1);
+    updateDeltaV(-1, -1, -1);
   }
 }
 
