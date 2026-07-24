@@ -23,8 +23,10 @@ namespace KSA
         public FlightComputer FlightComputer { get; set; } = new FlightComputer();
 
         private NavBallData _navBallData;
-        // Real KSA: a ref-returning property over a NavBallData struct.
-        public ref NavBallData NavBallData => ref _navBallData;
+        // Real KSA: a ref READONLY property over a NavBallData struct. The getter return carries an
+        // InAttribute modreq; declaring plain `ref` here emits a getter signature the runtime can't
+        // bind ("Method not found: KSA.NavBallData ByRef ... get_NavBallData()").
+        public ref readonly NavBallData NavBallData => ref _navBallData;
 
         public double OrbitalSpeed { get; set; }
         public float PropellantMass { get; set; }
