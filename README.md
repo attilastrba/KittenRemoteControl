@@ -1,14 +1,19 @@
-﻿# Kitten Remote Control
+# Kitten Remote Control
 
 Remote control **and** live telemetry for **Kitten Space Agency (KSA)**, exposed over HTTP — so you
 can fly and monitor a vessel from scripts, a microcontroller, or a phone browser.
 
-> ⚠️ **Proof of concept.** This is an experimental hobby mod, not a finished product. It grew out of
-> getting KSA's mod API reachable while running the game under **Wine/CrossOver** on macOS/Linux
-> (where `System.Net.HttpListener` / http.sys is unavailable), so it ships a small built-in
-> `TcpListener` HTTP server instead. The API surface is **partial and evolving**, there is **no
+> ⚠️ **Proof of concept.** This is an experimental hobby mod, not a finished product and the changes has been mostly VIBE Coded just to prove if it can work.
+>
+>It grew out of getting KSA's mod API reachable while running the game under **Wine/CrossOver** on macOS/Linux (where `System.Net.HttpListener` / http.sys is unavailable), so it ships a small built-in
+> `TcpListener` HTTP server instead.
+>
+> The API surface is **partial and evolving**, there is **no
 > authentication and no TLS**, and the servers bind to all interfaces (`0.0.0.0`) — anyone who can
 > reach the port can command your vessel. **Run it only on a trusted LAN.**
+>
+> The aim of this project is showcase what is possible for the future with hardware controllers for KSA. And I wanted to keep the API aligned so kids can use Microblocks and the same library that is being used for Telemachus/KSP: https://gitlab.com/attila.strba/microblocks-ksp-telemachus
+
 
 ## What's in the box
 
