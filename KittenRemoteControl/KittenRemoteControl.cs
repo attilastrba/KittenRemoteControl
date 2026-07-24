@@ -1,3 +1,4 @@
+using Brutal.ImGuiApi;
 using StarMap.API;
 
 namespace KittenRemoteControl
@@ -9,6 +10,7 @@ namespace KittenRemoteControl
         private const int TelemachusPort = 8085;
         private TcpHttpServer? _httpServer;
         private TcpHttpServer? _telemachusServer;
+        private bool _guiDisabled;
 
         [StarMapAfterGui]
         public void OnAfterUi(double dt)
@@ -16,6 +18,55 @@ namespace KittenRemoteControl
             // Runs on the main/UI thread each frame — execute work queued by HTTP handler threads
             // (e.g. staging) here so game-state mutations don't race the simulation thread.
             MainThreadDispatcher.Drain();
+        }
+
+        [StarMapBeforeGui]
+        public void OnBeforeUi(double dt)
+        {
+            if (_guiDisabled)
+                return;
+
+            // If the Brutal.ImGui binding can't resolve at runtime, disable the window rather than
+            // throw every frame — the HTTP servers keep working regardless.
+            try
+            {
+                DrawStatusWindow();
+            }
+            catch (Exception ex)
+            {
+                _guiDisabled = true;
+                Console.WriteLine($"[KittenRemoteControl] Status window disabled (ImGui unavailable): {ex.Message}");
+            }
+        }
+
+        private void DrawStatusWindow()
+        {
+            var open = ImGui.Begin("Kitten Remote Control", ImGuiWindowFlags.None);
+            if (open)
+            {
+                ImGui.Text($"Control API : http://0.0.0.0:{Port}");
+                ImGui.Text($"Telemachus  : http://0.0.0.0:{TelemachusPort}/telemachus/datalink");
+                ImGui.Separator();
+
+                var connections = ConnectionTracker.Snapshot();
+                if (connections.Count == 0)
+                {
+                    ImGui.Text("No clients have connected yet.");
+                }
+                else
+                {
+                    var now = Environment.TickCount64;
+                    ImGui.Text($"Clients ({connections.Count}):");
+                    foreach (var c in connections)
+                    {
+                        var ageSec = (now - c.LastSeenTick) / 1000;
+                        var live = now - c.LastSeenTick < 5000 ? "LIVE" : "idle";
+                        ImGui.Text($"  [{live}] {c.Ip}:{c.Port}  reqs={c.Count}  {ageSec}s ago  {c.LastRequest}");
+                    }
+                }
+            }
+
+            ImGui.End();
         }
 
         [StarMapAllModsLoaded]

@@ -151,6 +151,8 @@ namespace KittenRemoteControl
                     if (request == null)
                         return;
 
+                    ConnectionTracker.Record(RemoteIp(client), _port, $"{request.Method} {request.Path}");
+
                     HttpResponse response;
                     if (request.Method == "OPTIONS")
                     {
@@ -191,6 +193,24 @@ namespace KittenRemoteControl
 
         private static Exception Unwrap(Exception ex)
             => ex is TargetInvocationException { InnerException: { } inner } ? inner : ex;
+
+        // Extract the client IP from the accepted TcpClient via reflection (no System.Net.Sockets
+        // token in our IL). IPEndPoint/IPAddress live in System.Net.Primitives, which resolves fine.
+        private static string RemoteIp(object client)
+        {
+            try
+            {
+                var socket = client.GetType().GetProperty("Client")?.GetValue(client);
+                var endpoint = socket?.GetType().GetProperty("RemoteEndPoint")?.GetValue(socket);
+                if (endpoint is IPEndPoint ip)
+                    return ip.Address.ToString();
+                return endpoint?.ToString() ?? "?";
+            }
+            catch
+            {
+                return "?";
+            }
+        }
 
         private static async Task<HttpRequest?> ReadRequestAsync(Stream stream)
         {

@@ -45,7 +45,8 @@
         </Reference>
         <Reference Include="Brutal.ImGui">
             <HintPath>$(MSBuildProjectDirectory)\..\KSA_dlls\Brutal.ImGui.dll</HintPath>
-            <Private>true</Private>
+            <!-- Compile-time stub in KSA_dlls; real Brutal.ImGui is provided by the game at runtime. -->
+            <Private>false</Private>
         </Reference>
         <Reference Include="Brutal.ImGui.Extensions">
             <HintPath>$(MSBuildProjectDirectory)\..\KSA_dlls\Brutal.ImGui.Extensions.dll</HintPath>
