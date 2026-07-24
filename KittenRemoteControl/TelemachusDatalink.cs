@@ -159,13 +159,16 @@ namespace KittenRemoteControl
                 {
                     var vehicle = Program.ControlledVehicle;
                     if (vehicle == null) return -1;
-                    return Program.CurrentAltitudeKm * 1000.0; // km -> m
+                    return vehicle.NavBallData.Altitude; // navball altitude (m ASL), matches HUD
                 }
 
                 case "o.ApA": return AltitudeAsl(apoapsis: true, km: false);   // apoapsis ASL (m)
                 case "o.PeA": return AltitudeAsl(apoapsis: false, km: false);  // periapsis ASL (m)
                 case "o.ApAkm": return AltitudeAsl(apoapsis: true, km: true);  // apoapsis ASL (km, non-stock)
                 case "o.PeAkm": return AltitudeAsl(apoapsis: false, km: true); // periapsis ASL (km, non-stock)
+
+                case "o.ApR": { var o = Program.ControlledVehicle?.Orbit; return o == null ? -1 : o.Apoapsis; }   // apoapsis radius (m)
+                case "o.PeR": { var o = Program.ControlledVehicle?.Orbit; return o == null ? -1 : o.Periapsis; }  // periapsis radius (m)
 
                 case "f.stage": // fire the next stage (KSA: activate next sequence)
                     // Marshalled to the main thread; running it on the HTTP thread races the sim
@@ -203,15 +206,27 @@ namespace KittenRemoteControl
             }
         }
 
-        // Apoapsis/periapsis altitude above sea level (orbit radius - body near-surface radius).
-        // Returns -1 when there is no orbit. km=true divides the result by 1000.
+        // Apoapsis/periapsis altitude above sea level = orbit radius - body mean (sea-level) radius.
+        // Orbit.Apoapsis/Periapsis are radii from the body centre; the sea-level radius lives on the
+        // concrete body (PlanetaryBody/StellarBody.MeanRadius), read via reflection off Parent since
+        // the IParentBody interface doesn't expose it. (GetNearSurfaceRadius() is ~167 km too big.)
+        // Returns -1 with no orbit. km=true divides by 1000.
         private static object AltitudeAsl(bool apoapsis, bool km)
         {
             var orbit = Program.ControlledVehicle?.Orbit;
             if (orbit == null) return -1;
             var radius = apoapsis ? orbit.Apoapsis : orbit.Periapsis;
-            var alt = radius - (orbit.Parent?.GetNearSurfaceRadius() ?? 0.0);
+            var alt = radius - BodyMeanRadius(orbit.Parent);
             return km ? alt / 1000.0 : alt;
+        }
+
+        // Body sea-level radius. orbit.Parent is an IParentBody; the concrete body type exposes a
+        // MeanRadius (double) which the interface does not, so read it by reflection.
+        private static double BodyMeanRadius(object? parent)
+        {
+            if (parent == null) return 0.0;
+            var prop = parent.GetType().GetProperty("MeanRadius");
+            return prop != null ? Convert.ToDouble(prop.GetValue(parent), CultureInfo.InvariantCulture) : 0.0;
         }
 
         // Parse a Telemachus-style boolean arg: true/false (any case) or 1/0. null if unparseable.

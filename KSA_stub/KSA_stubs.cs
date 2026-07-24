@@ -77,10 +77,11 @@ namespace KSA
         Auto = 1,
     }
 
-    // Real KSA: a struct; Frame is a public field.
+    // Real KSA: a struct; Frame and Altitude are public fields.
     public struct NavBallData
     {
         public VehicleReferenceFrame Frame;
+        public double Altitude;
     }
 
     public enum VehicleReferenceFrame
