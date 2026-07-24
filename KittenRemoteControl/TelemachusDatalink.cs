@@ -180,6 +180,15 @@ namespace KittenRemoteControl
                     });
                     return 0;
 
+                // Delta-v (m/s), computed by KSA per stage and in total.
+                case "dv.totalDVActual":
+                {
+                    var v = Program.ControlledVehicle;
+                    return v == null ? -1 : (double)v.Parts.PerformanceSequences.TotalDeltaV;
+                }
+                case "dv.stageDVActual":    return StageDeltaV().current;   // active stage delta-v now (m/s)
+                case "dv.stageMaxDVActual": return StageDeltaV().max;       // active stage delta-v at ignition (m/s)
+
                 // Not a stock Telemachus key, but follows the same action-group toggle convention
                 // (no arg -> toggle, [true]/[false] -> set). Turns the engine on/off.
                 case "f.engine":
@@ -220,6 +229,40 @@ namespace KittenRemoteControl
             return km ? alt / 1000.0 : alt;
         }
 
+        private static int _dvStageIndex = -1;
+        private static double _peakStageDv = -1;
+
+        // Active-stage delta-v (m/s): current = the firing stage's delta-v now; max = its delta-v at
+        // ignition (peak since this stage became current, reset when the current stage changes). Gives
+        // a stable "full" reference so a client can compute remaining fraction = current / max.
+        private static (double current, double max) StageDeltaV()
+        {
+            var vehicle = Program.ControlledVehicle;
+            if (vehicle == null) return (-1, -1);
+            var span = vehicle.Parts.PerformanceSequences.PerformanceSequences;
+            var idx = CurrentStageIndex(span);
+            if (idx < 0) return (-1, -1);
+            var current = (double)span[idx].DeltaV;
+            if (idx != _dvStageIndex) { _dvStageIndex = idx; _peakStageDv = current; } // new stage -> reset
+            if (current > _peakStageDv) _peakStageDv = current;
+            return (current, _peakStageDv);
+        }
+
+        // Index of the "current" stage in the performance list: the one currently firing (max thrust);
+        // when nothing is burning, the stage with the most delta-v remaining. -1 if the list is empty.
+        // (SequenceList.ActiveSequence pointed at a spent/idle stage, so we detect by thrust instead.)
+        private static int CurrentStageIndex(System.ReadOnlySpan<SequencePerformance> span)
+        {
+            int firing = -1; float bestThrust = 0f;
+            int biggest = -1; float bestDv = -1f;
+            for (var i = 0; i < span.Length; i++)
+            {
+                if (span[i].Thrust > bestThrust) { bestThrust = span[i].Thrust; firing = i; }
+                if (span[i].DeltaV > bestDv) { bestDv = span[i].DeltaV; biggest = i; }
+            }
+            return firing >= 0 ? firing : biggest;
+        }
+
         // Body sea-level radius. orbit.Parent is an IParentBody; the concrete body type exposes a
         // MeanRadius (double) which the interface does not, so read it by reflection.
         private static double BodyMeanRadius(object? parent)
@@ -246,6 +289,9 @@ namespace KittenRemoteControl
         private static object? FormatValue(object value, bool asInt, int precision)
         {
             if (value is string || value is bool) return value;
+            // Non-numeric values (e.g. the r.resourceNameList array) pass through unformatted.
+            if (value is not (int or long or short or byte or sbyte or uint or ulong or ushort or float or double or decimal))
+                return value;
 
             var d = Convert.ToDouble(value, CultureInfo.InvariantCulture);
             if (precision < 0 || precision > 15) return d; // raw

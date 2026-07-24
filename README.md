@@ -117,12 +117,17 @@ on a microcontroller — talk to KSA with **no changes**.
 | `o.ApA` / `o.PeA` | read | Apoapsis / periapsis **altitude** ASL (m). |
 | `o.ApAkm` / `o.PeAkm` | read | Same, in **km** (non-stock convenience keys). |
 | `o.ApR` / `o.PeR` | read | Apoapsis / periapsis **radius** from the body centre (m). |
+| `dv.totalDVActual` | read | Total vessel delta-v remaining (m/s). |
+| `dv.stageDVActual` | read | Current (firing) stage delta-v remaining (m/s). |
+| `dv.stageMaxDVActual` | read | Current stage delta-v at ignition (m/s) — non-stock; a stable reference so a client can show `stage / stageMax`. |
 | `f.setThrottle[0..1]` | command | Set engine throttle (accepts `\|scale:0,1023`). |
 | `f.stage` | command | Fire the next stage. |
 | `f.engine[true\|false]` | command | Engine on/off; bare `f.engine` toggles. Non-stock, follows the Telemachus toggle convention. |
 
-More keys (resources, orbital elements, time/warp, SAS/attitude, fly-by-wire) are researched and can
-be enabled incrementally.
+Notes: the "current stage" is detected by thrust (the sequence that's actually firing), not KSA's
+active-stage index. KSA has **no KSP-style named resources** (it's a substance/chemistry sim), so
+`r.resource[...]` keys are intentionally *not* implemented; use `dv.*` and telemetry instead. Other
+keys (orbital elements, time/warp, SAS/attitude, fly-by-wire) are researched and can be added.
 
 **Examples** — use `curl -g` so the shell doesn't try to glob `[` `]`:
 

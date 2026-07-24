@@ -59,11 +59,27 @@ namespace KSA
     public class PartTree
     {
         public SequenceList SequenceList = new SequenceList();
+        public SequencePerformanceList PerformanceSequences = new SequencePerformanceList();
     }
 
     public class SequenceList
     {
         public void ActivateNextSequence(Vehicle vehicle) { /* noop in stub */ }
+    }
+
+    // Per-stage performance. Real KSA: a struct with many fields; we read propellant + delta-v.
+    public struct SequencePerformance
+    {
+        public float DeltaV;   // stage delta-v (m/s)
+        public float Thrust;   // stage thrust (N) — >0 means this stage is firing
+    }
+
+    public class SequencePerformanceList
+    {
+        // Real KSA: property returning ReadOnlySpan<SequencePerformance> by value.
+        public System.ReadOnlySpan<SequencePerformance> PerformanceSequences => default;
+        // Total delta-v across all stages (m/s).
+        public float TotalDeltaV => 0;
     }
 
     public class FlightComputer
