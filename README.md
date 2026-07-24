@@ -1,6 +1,28 @@
-﻿# Kitten Remote Control - REST API Documentation
+﻿# Kitten Remote Control
 
-A RESTful API server mod for Kitten Space Agency that enables remote control via HTTP endpoints with JSON responses.
+Remote control **and** live telemetry for **Kitten Space Agency (KSA)**, exposed over HTTP — so you
+can fly and monitor a vessel from scripts, a microcontroller, or a phone browser.
+
+> ⚠️ **Proof of concept.** This is an experimental hobby mod, not a finished product. It grew out of
+> getting KSA's mod API reachable while running the game under **Wine/CrossOver** on macOS/Linux
+> (where `System.Net.HttpListener` / http.sys is unavailable), so it ships a small built-in
+> `TcpListener` HTTP server instead. The API surface is **partial and evolving**, there is **no
+> authentication and no TLS**, and the servers bind to all interfaces (`0.0.0.0`) — anyone who can
+> reach the port can command your vessel. **Run it only on a trusted LAN.**
+
+## What's in the box
+
+| Component | Port | What it is |
+|-----------|------|-----------|
+| **Control REST API** | 8080 | JSON REST endpoints for control + telemetry (`/control/*`, `/telemetry/*`). |
+| **Telemachus datalink** | 8085 | A Telemachus-compatible `/telemachus/datalink` endpoint so existing Telemachus clients (e.g. a MicroBlocks library) work unchanged. |
+| **In-game window** | — | An ImGui overlay listing which clients are connected. |
+| **Houston dashboard** | — | A self-contained web page (`frontend/houston.html`) with KSA-style rolling-odometer gauges. |
+
+Jump to: [Telemachus datalink](#telemachus-datalink-proof-of-concept) ·
+[Houston dashboard](#houston-web-dashboard) ·
+[In-game window](#in-game-status-window) ·
+[REST API](#protocol)
 
 ## Installation
 
@@ -64,6 +86,88 @@ To remove the mod:
 ## Installation according to this explanation
 
 See: https://forums.ahwoo.com/threads/how-to-use-starmap-mod-loader.398/#post-2113
+
+## Telemachus datalink (proof of concept)
+
+A second HTTP server on **port 8085** exposes a single endpoint, `/telemachus/datalink`, that is
+wire-compatible with the classic **Telemachus** "datalink" protocol (from the KSP mod of the same
+name). This lets existing Telemachus clients — for example a MicroBlocks Telemachus library running
+on a microcontroller — talk to KSA with **no changes**.
+
+- **Request:** `label=apiString` pairs, either as a **GET** query string
+  (`?alt=v.altitude&ap=o.ApAkm`) or a **POST** JSON body (`{"alt":"v.altitude"}`).
+- **Response:** a flat JSON object keyed by *your* labels, e.g. `{"alt":250000,"ap":874.0}`.
+- **Reserved GET params:** `_int=true` (return integers), `_precision=N` (round to N decimals).
+- **Input scaling:** a trailing `|scale:min,max` maps the first bracket argument linearly from
+  `[min,max]` to `[0,1]` — used for throttle (`f.setThrottle[512]|scale:0,1023`).
+- **Conventions:** unknown/unavailable values return `-1`; `a.version` always answers (it's the
+  connection heartbeat); commands return `0` on success.
+
+### Implemented keys (so far)
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `a.version` | read | Version string; answerable in every scene (heartbeat). |
+| `v.altitude` | read | Altitude above sea level (m). |
+| `o.ApA` / `o.PeA` | read | Apoapsis / periapsis **altitude** ASL (m). |
+| `o.ApAkm` / `o.PeAkm` | read | Same, in **km** (non-stock convenience keys). |
+| `o.ApR` / `o.PeR` | read | Apoapsis / periapsis **radius** from the body centre (m). |
+| `f.setThrottle[0..1]` | command | Set engine throttle (accepts `\|scale:0,1023`). |
+| `f.stage` | command | Fire the next stage. |
+| `f.engine[true\|false]` | command | Engine on/off; bare `f.engine` toggles. Non-stock, follows the Telemachus toggle convention. |
+
+More keys (resources, orbital elements, time/warp, SAS/attitude, fly-by-wire) are researched and can
+be enabled incrementally.
+
+**Examples** — use `curl -g` so the shell doesn't try to glob `[` `]`:
+
+```bash
+# heartbeat
+curl "http://localhost:8085/telemachus/datalink?v=a.version"                    # {"v":"1.0.0"}
+
+# telemetry (apoapsis/periapsis in km, altitude in m)
+curl "http://localhost:8085/telemachus/datalink?ap=o.ApAkm&pe=o.PeAkm&alt=v.altitude"
+
+# set throttle to ~50%
+curl -g "http://localhost:8085/telemachus/datalink?c1=f.setThrottle[0.5]"       # {"c1":0}
+
+# stage / engine on
+curl -g "http://localhost:8085/telemachus/datalink?c1=f.stage"
+curl -g "http://localhost:8085/telemachus/datalink?c1=f.engine[true]"
+```
+
+## In-game status window
+
+When the mod loads it draws an ImGui overlay titled **"Kitten Remote Control"** in-game, showing the
+two server URLs and every client that has connected — IP, port, request count, last request line,
+and a `LIVE`/`idle` indicator. Handy for confirming that your phone or microcontroller actually
+reached the game.
+
+## Houston web dashboard
+
+`frontend/houston.html` is a self-contained web dashboard (no external dependencies, no build step)
+that polls the datalink and shows **Apoapsis / Periapsis / Altitude** on KSA-style rolling-odometer
+gauges, with a connection light, editable host/port/refresh-rate, and an astronaut-cat mascot. 🐱‍🚀
+
+**On the same machine as KSA** — just open the file in a browser:
+
+```bash
+open frontend/houston.html          # macOS  (or double-click it)
+```
+
+**From a phone or another device on the LAN** — serve the `frontend` folder and browse to the host's
+IP:
+
+```bash
+cd frontend
+python3 -m http.server 8000
+# then on the phone (same Wi-Fi):  http://<host-ip>:8000/houston.html
+```
+
+When it's served over HTTP the page automatically targets the serving host for the datalink, so no
+configuration is needed on the phone. This works because the datalink binds `0.0.0.0` and sends a
+permissive CORS header. (First run on macOS may prompt to allow incoming connections for Python —
+click Allow.)
 
 ## Protocol
 
