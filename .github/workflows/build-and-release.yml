@@ -3,6 +3,7 @@ name: Build and Release
 on:
   push:
     branches: [ main, master, develop ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main, master, develop ]
 
@@ -64,6 +65,14 @@ jobs:
         # Emits StarMap.API.dll directly into KSA_dlls; the main project references it there.
         # This keeps the build token-free (public starmap.api is net10-only and cannot target net9).
         dotnet build "StarMap_stub/StarMap_stub.csproj" -c Release
+      shell: powershell
+
+    - name: Build local Brutal.ImGui stub
+      run: |
+        echo "Building local Brutal.ImGui stub to provide Brutal.ImGui.dll for the build"
+        # Emits Brutal.ImGui.dll into KSA_dlls; the in-game status window compiles against it.
+        # The real Brutal.ImGui is provided by the game at runtime.
+        dotnet build "Brutal_stub/Brutal_stub.csproj" -c Release
       shell: powershell
 
     - name: Add StarMap GitHub Packages NuGet feed (using personal token)

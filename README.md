@@ -31,9 +31,17 @@ Jump to: [Telemachus datalink](#telemachus-datalink-proof-of-concept) ·
 
 ## Installation
 
+### Prebuilt DLL (quickest)
+
+Grab the prebuilt mod straight from the repo: [`dist/KittenRemoteControl/`](dist/KittenRemoteControl)
+— the [**`KittenRemoteControl.dll`**](dist/KittenRemoteControl/KittenRemoteControl.dll) plus its
+`deps.json` and `mod.toml`. Copy that `KittenRemoteControl` folder into your game's mod directory
+(e.g. `<Game>/Content/KittenRemoteControl/`) and launch. `0Harmony.dll` / `StarMap.API.dll` and the
+game DLLs are provided by the StarMap loader at runtime, so they're not included.
+
 ### From GitHub Releases (Recommended)
 
-1. **Download the latest release** from the [Releases page](https://github.com/[your-repo]/KittenRemoteControl/releases)
+1. **Download the latest release** from the [Releases page](https://github.com/attilastrba/KittenRemoteControl/releases)
 2. **Extract the ZIP file** to your game's mod directory:
    ```
    <Game Directory>/mods/KittenRemoteControl/
